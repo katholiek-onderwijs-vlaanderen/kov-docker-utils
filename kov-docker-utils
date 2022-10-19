@@ -1,0 +1,52 @@
+#!/bin/bash
+# set -o xtrace
+
+# WE DEPEND ON DICKER BUILKDKIT FEATURES so every docker compose command should be run with
+# DOCKER_BUILDKIT=1 docker compose ...
+# so is it a good idea to define this once up here???
+# DOCKER_BUILDKIT=1
+
+SCRIPTNAME=$(basename "$0")
+
+################################################################################
+# below are the supported commands
+################################################################################
+
+# returns string true if up and running and false if not
+function postgres() {
+  bash ./scripts/kov-docker-utils.postgres.sh "$@"
+}
+
+################################################################################
+# THE ACTUAL SCRIPT
+################################################################################
+
+COMMAND=$1
+
+if [[ "${COMMAND}" != @(postgres) ]]; then
+  echo "
+Usage: ./${SCRIPTNAME} <INSTANCE_TYPE> <COMMAND> <UNIQUE_NAME> ...
+  * INSTANCE_TYPE = what type of docker instance you need, for example postgres
+  * COMMAND = what to do (this depends on the instance type)
+    * start: will start a docker container of the specified type
+            (further parameters depend on the instance type)
+    * stop: will stop the postgresql db server, but wil leave the docker image available for later use
+    * cleanup: will cleanup all related docker artifacts and reclaim disk space
+    * logs: will send the docker container logs to stdout
+    * ... more commands may be available for certain unstance types
+  * UNIQUE_NAME = (LOWERCASE and - or _ ONLY!) the name used as the basis for the Dockerfiles, the docker container etc.
+    This name is needed in every command so we know which docker containers to modify.
+    (If it is not unique you might interfere with other users of the same script, so using your
+    git project name could be a viable option.)
+
+  Examples:
+    * imagine you want to use this in a NodeJS test suite that needs a DB.
+      add this to the 'test' script inside package.json:
+      \"test\": \"kov-docker-utils postgres start my_project ./docker/initdb && mocha; kov-docker-utils postgres stop myProject\"
+"
+  exit -1
+fi
+
+# pass on the next arguments to the relevant function that implments the command
+#   cfr. https://stackoverflow.com/a/3816747
+$COMMAND "${@:2}"
