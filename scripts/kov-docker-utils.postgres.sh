@@ -70,13 +70,50 @@ function waituntilupandrunning() {
 
   echo "Start checking if the postgresql server container '$UNIQUE_NAME' is up and running..."
 
-  while [ $(isupandrunning "${UNIQUE_NAME}") == "false" ]; do
-    echo -n -e "\r$(date) waiting until the DB server is fully started";
-    sleep 3;
-    echo -n -e "\r                                                  ";
+  local READY="false"
+  local INITCOMPLETE="false"
+  local INITNOTNEEDED="false"
+
+  ( echo "$BASHPID"; docker container ls | grep "${UNIQUE_NAME}" | awk '{print $1}' | xargs docker logs --follow 2>&1 ) | \
+  while read LINE ; do
+    if [ -z $TPID ]; then
+        echoerr "tpid = $LINE"
+        TPID=$LINE # the first line is used to store the previous subshell PID
+    else
+      echo "$LINE"
+      
+      # ideally what follows is a function that can be passed to this function
+      if [ "$READY" == "false" ] && [[ "$LINE" == *"database system is ready to accept connections"* ]]; then
+        export READY="true"
+      fi
+
+      if [ "$INITCOMPLETE" == "false" ] && [[ "$LINE" == *"PostgreSQL init process complete; ready for start up."* ]]; then
+        export INITCOMPLETE="true"
+      fi
+
+      if [ "$INITNOTNEEDED" == "false" ] && [[ "$LINE" == *"Skipping initialization"* ]]; then
+        INITNOTNEEDED="true"
+      fi
+
+      # echo "--------> if $READY && ( $INITCOMPLETE || $INITNOTNEEDED)"
+
+      if [ "$READY" == "true" ] && ( [ "$INITCOMPLETE" == "true" ] || [ "$INITNOTNEEDED" == "true" ] ); then
+        kill -3 "$TPID"
+        echo "true"
+        break
+      fi
+    fi
   done
 
-  echo "The postgresql server container '$UNIQUE_NAME' is up and running..."
+  # | local OK=$(cat)
+
+  echo "The postgresql server container '$UNIQUE_NAME' is MOST LIKELY up and running..."
+
+  # if [ "$OK" == "true" ]; then
+  #   echo "The postgresql server container '$UNIQUE_NAME' is up and running..."
+  # else
+  #   echo "The postgresql server container '$UNIQUE_NAME' is NOT up and running..."
+  # fi
 }
 
 
@@ -259,9 +296,6 @@ Usage: ./${SCRIPTNAME} <unique_name> <sql_command>
   fi
 
   echoerr "Checking if the postgresql server container '$EXISTING_DOCKER_NAME' is up and running..."
-  LOGS=$(getContainerLogs "$EXISTING_DOCKER_NAME")
-  READY=$(echo "$LOGS" | grep 'database system is ready to accept connections')
-  INITCOMPLETE=$(echo "$LOGS" | grep 'PostgreSQL init process complete; ready for start up.');
 
   if [ $(isupandrunning "${UNIQUE_NAME}") == "true" ]; then
     echoerr "The postgresql server container '$EXISTING_DOCKER_NAME' is up and running..."
