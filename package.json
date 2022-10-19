@@ -1,0 +1,27 @@
+{
+  "name": "kov-docker-utils",
+  "version": "1.0.0",
+  "description": "docker utils for Katholiek Onderwijs Vlaanderen to make working with docker easier for some of our returning use cases",
+  "main": "kov-docker-utils",
+  "bin": {
+    "kov-docker-utils": "./kov-docker-utils"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/katholiek-onderwijs-vlaanderen/kov-docker-utils.git"
+  },
+  "keywords": [
+    "docker",
+    "nodejs",
+    "test"
+  ],
+  "author": "Jesse Geelissen & Frederik Tilkin",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/katholiek-onderwijs-vlaanderen/kov-docker-utils/issues"
+  },
+  "homepage": "https://github.com/katholiek-onderwijs-vlaanderen/kov-docker-utils#readme"
+}
