@@ -7,6 +7,8 @@
 # DOCKER_BUILDKIT=1
 
 SCRIPTNAME=$(basename "$0")
+SCRIPTDIR=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+
 
 ################################################################################
 # below are the supported commands
@@ -14,7 +16,7 @@ SCRIPTNAME=$(basename "$0")
 
 # returns string true if up and running and false if not
 function postgres() {
-  bash ./scripts/kov-docker-utils.postgres.sh "$@"
+  bash "${SCRIPTDIR}/scripts/kov-docker-utils.postgres.sh" "$@"
 }
 
 ################################################################################

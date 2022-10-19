@@ -9,13 +9,21 @@ As a result, these tests becomeso much more portable because the dependency to a
 
 Since we are doing most of our development in nodejs anayway, we decided to make this an npm repo, so it can easily be added as a dev dependency.
 
-### Installation as a dev depencdency
+### Installation as a dev dependency
+
+#### npm > 8
 ```bash
-npm install --save-dev git@github.com:katholiek-onderwijs-vlaanderen/kov-docker-utils.git
+npm install --save-dev katholiek-onderwijs-vlaanderen/kov-docker-utils
 ```
+
+#### npm <= 6
+```bash
+npm install --save-dev git+https://github.com/katholiek-onderwijs-vlaanderen/kov-docker-utils.git
+```
+
 ### Global installation
 ```bash
-npm install -g git@github.com:katholiek-onderwijs-vlaanderen/kov-docker-utils.git
+npm install -g katholiek-onderwijs-vlaanderen/kov-docker-utils
 ```
 ## Usage
 
