@@ -29,7 +29,6 @@ function generateDockerComposeFileName() {
   echo "${UNIQUE_NAME}.docker-compose.yml"
 }
 
-
 ################################################################################
 # below are the supported commands
 ################################################################################
@@ -55,7 +54,7 @@ function waituntilupandrunning() {
   Usage: ./${SCRIPTNAME} <dockerContainerName>
     * dockerContainerName = the name of a docker container based on a postgresdb image
 
-    This script wil scan the logs of that container for 2 lines:
+    This script will scan the logs of that container for 2 lines:
       'database system is ready to accept connections'
       'PostgreSQL init process complete; ready for start up' OR 'Skipping initialization'
     and if both of them are found in the logs, we know that the database server is fully initialized
@@ -124,7 +123,8 @@ Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
   * unique_name = the name to use as a base for the various docker related files,
     the docker container etc.
     WATCH OUT: must be LOWERCASE !!!
-  * port = the pot on localhost where the postgresql server wil be listening on.
+  * port = the port on localhost where the postgresql server will be listening on.
+  * [FUTURE, to be implmented] version = a number indicating whether you need a postgres 11,12,13 instance
   * context = folder where the files are located that are used to initialize the
     database on first start, defaults to '' ('' or empty string means that you only
     want an empty database, and nothing else)
@@ -136,7 +136,7 @@ Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
       other places, all symbolic links will be replacedby the actual content before sending
       the build context to docker.
 
-  This script wil create the docker-files for a postgres database and start it.
+  This script will create the docker-files for a postgres database and start it.
   Some defaults are fixed: the default database is called postgres, and a user called
   postgres with password postgres can be used to connect to this database.
   Any other users you want to set up must be created through the use of the files in the
@@ -259,21 +259,15 @@ function cleanup() {
   rm "${DOCKER_FILENAME}" "${DOCKERCOMPOSE_FILENAME}"
 }
 
-function execsql() {
-  if [ $# -ne 2 ]; then
-    echo "
-Usage: ./${SCRIPTNAME} <unique_name> <sql_command>
-  * unique_name = the unique name for this docker container
-  * sql_command = the SQL command you want to run on the postgresdb container
-
-  This script wil run the SQL command on the postgresdb container and print the output without headers.
-"
-    exit -1
-  fi
-
+# Given the unique name folowed by the command line arguments to execute
+# it will locate the docker container and run the commands for you
+#
+# This is both a utility function used by execsql and shell,
+# and a standalone function to run any command on the container
+function exec() {
   # UNIQUE_NAME=$(awk '/postgresdb:/{flag=1} flag && /container_name:/{print $NF;flag=""}'  test.docker-compose.yml)
   local UNIQUE_NAME="$1"
-  local SQL_COMMAND="$2"
+  local COMMAND=( "${@:2}" )
 
   local EXISTING_DOCKER=$(docker container ls -a --format "{{.Names}}\t{{.Status}}" | grep "^${UNIQUE_NAME}\s")
   local EXISTING_DOCKER_NAME=$(echo ${EXISTING_DOCKER} | awk '{print $1}')
@@ -288,22 +282,46 @@ Usage: ./${SCRIPTNAME} <unique_name> <sql_command>
     for CONTAINER in ${ALL_EXISTING_CONTAINERS[@]}; do
       echoerr "- ${CONTAINER}"
     done
-    exit -1
+    return -1
   elif [[ ${EXISTING_DOCKER_EXITED} != '' ]]; then
     echoerr "ERROR Found docker container \"${EXISTING_DOCKER_NAME}\" but it is not running."
     echoerr "- ${EXISTING_DOCKER_EXITED}"
-    exit -1
+    return -1
   fi
 
   echoerr "Checking if the postgresql server container '$EXISTING_DOCKER_NAME' is up and running..."
 
   if [ $(isupandrunning "${UNIQUE_NAME}") == "true" ]; then
     echoerr "The postgresql server container '$EXISTING_DOCKER_NAME' is up and running..."
-    echoerr "running SQL query \"${SQL_COMMAND}\""
-    docker exec -it ${EXISTING_DOCKER_NAME} psql --username postgres --dbname postgres --tuples-only -c "${SQL_COMMAND}"
+    echoerr "running command \"${COMMAND}\""
+    echoerr docker exec -it ${EXISTING_DOCKER_NAME} "${COMMAND[@]}"
+    docker exec -it "${EXISTING_DOCKER_NAME}" "${COMMAND[@]}"
+    return $?
   else
     echoerr "ERROR The postgresql server container is not up and running! Exiting..."
+    return -1
   fi
+}
+
+
+function execsql() {
+  if [ $# -ne 2 ]; then
+    echo "
+Usage: ./${SCRIPTNAME} <unique_name> <sql_command>
+  * unique_name = the unique name for this docker container
+  * sql_command = the SQL command you want to run on the postgresdb container
+
+  This script will run the SQL command on the postgresdb container and print the output without headers.
+"
+    exit -1
+  fi
+
+  # UNIQUE_NAME=$(awk '/postgresdb:/{flag=1} flag && /container_name:/{print $NF;flag=""}'  test.docker-compose.yml)
+  local UNIQUE_NAME="$1"
+  local COMMAND="$2"
+
+  exec "${UNIQUE_NAME}" psql --username postgres --dbname postgres --tuples-only -c "${COMMAND}"
+  return $?
 }
 
 
@@ -313,6 +331,12 @@ function logs() {
   getContainerLogs "${UNIQUE_NAME}"
 }
 
+function shell() {
+  # echo exec $1 '/bin/bash'
+
+  exec $1 /bin/bash
+  return $?
+}
 
 ################################################################################
 # THE ACTUAL SCRIPT
@@ -320,7 +344,7 @@ function logs() {
 
 COMMAND=$1
 
-if [[ "${COMMAND}" != @(start|stop|execsql|cleanup|logs|waituntilupandrunning) ]]; then
+if [[ "${COMMAND}" != @(start|stop|execsql|cleanup|logs|shell|exec|waituntilupandrunning) ]]; then
   echo "
 Usage: ./${SCRIPTNAME} <COMMAND> <unique_name> ...
   * COMMAND = what to do
@@ -328,10 +352,12 @@ Usage: ./${SCRIPTNAME} <COMMAND> <unique_name> ...
       initialized with the contents of the context folder the very first time, or simply start
       the existing container if it already exists.
       The command will only exit when the server is up and ready to receive connections.
-    * stop: will stop the postgresql db server, but wil leave the docker image available for later use
+    * stop: will stop the postgresql db server, but will leave the docker image available for later use
     * cleanup: will cleanup all related docker artifacts and reclaim disk space
-    * execsql: will execute some sql on the server and return the results (if any).
+    * execsql: will execute some sql on the server and return the results (if any)
     * logs: will send the docker container logs to stdout
+    * shell: will start a shell inside the postgresql container (can help with debugging initdb scripts)
+    * exec: will execute any given command inside the postgresql container (used internally by shell and execsql)
     * waituntilupandrunning: checks if the container is ready and listening for connections
   * unique_name = the name used as the basis for the Dockerfiles, the docker container etc.
     If it is not unique you might interfere with other users of the same script, so using your
