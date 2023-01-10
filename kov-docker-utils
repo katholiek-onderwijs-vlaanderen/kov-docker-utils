@@ -19,20 +19,25 @@ function postgres() {
   bash "${SCRIPTDIR}/scripts/kov-docker-utils.postgres.sh" "$@"
 }
 
+# returns string true if up and running and false if not
+function mssql() {
+  bash "${SCRIPTDIR}/scripts/kov-docker-utils.mssql.sh" "$@"
+}
+
 ################################################################################
 # THE ACTUAL SCRIPT
 ################################################################################
 
 COMMAND=$1
 
-if [[ "${COMMAND}" != @(postgres) ]]; then
+if [[ "${COMMAND}" != @(postgres|mssql) ]]; then
   echo "
 Usage: ./${SCRIPTNAME} <INSTANCE_TYPE> <COMMAND> <UNIQUE_NAME> ...
   * INSTANCE_TYPE = what type of docker instance you need, for example postgres
   * COMMAND = what to do (this depends on the instance type)
     * start: will start a docker container of the specified type
             (further parameters depend on the instance type)
-    * stop: will stop the postgresql db server, but wil leave the docker image available for later use
+    * stop: will stop the container, but wil leave the docker image available for later use
     * cleanup: will cleanup all related docker artifacts and reclaim disk space
     * logs: will send the docker container logs to stdout
     * ... more commands may be available for certain unstance types
@@ -44,7 +49,7 @@ Usage: ./${SCRIPTNAME} <INSTANCE_TYPE> <COMMAND> <UNIQUE_NAME> ...
   Examples:
     * imagine you want to use this in a NodeJS test suite that needs a DB.
       add this to the 'test' script inside package.json:
-      \"test\": \"kov-docker-utils postgres start my_project ./docker/initdb && mocha; kov-docker-utils postgres stop myProject\"
+      \"test\": \"kov-docker-utils postgres start my_project 5432 ./docker/initdb && mocha; kov-docker-utils postgres stop my_project\"
 "
   exit -1
 fi

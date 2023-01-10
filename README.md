@@ -31,18 +31,34 @@ npm install -g katholiek-onderwijs-vlaanderen/kov-docker-utils
 kov-docker-utils logs 'unique_name'
 
 kov-docker-utils postgres start 'unique_name' 15432 ./dockerintdbfolder
-kov-docker-utils postgres execsql 'unique_name'
+kov-docker-utils postgres exec 'unique_name' 'bash'
+kov-docker-utils postgres execsql 'unique_name' 'select * from mytable'
 kov-docker-utils postgres stop 'unique_name'
 kov-docker-utils postgres cleanup 'unique_name'
 kov-docker-utils postgres logs 'unique_name' # needed?
 kov-docker-utils postgres isupandrunning 'unique_name'
 kov-docker-utils postgres waituntilupandrunning 'unique_name'
 
+kov-docker-utils mssql start 'unique_name' 15432 ./dockerintdbfolder
+kov-docker-utils mssql exec 'unique_name' 'bash'
+kov-docker-utils mssql execsql 'unique_name' 'select * from mytable'
+kov-docker-utils mssql stop 'unique_name'
+kov-docker-utils mssql cleanup 'unique_name'
+kov-docker-utils mssql logs 'unique_name' # needed?
+kov-docker-utils mssql isupandrunning 'unique_name'
+kov-docker-utils mssql waituntilupandrunning 'unique_name'
 
+# not implemented
 kov-docker-utils elasticsearch start 'project_name'
 kov-docker-utils elasticsearch query 'project_name'
 kov-docker-utils elasticsearch stop 'project_name'
 ```
+
+## Change log
+
+2023-01-10: added 'kov-docker-utils mssql' which works very similarly to postgres
+
+## Structure of the repo
 
 * package.json
     bin: 'kov-docker-utils' => npm install -g github.com:kov-docker-utils
@@ -50,35 +66,4 @@ kov-docker-utils elasticsearch stop 'project_name'
 * scripts
   * docker_utils.common.sh
   * kov-docker-utils.postgresdb.sh
-  * kov-docker-utils.elasticsearch.sh
-
-
-### postgresqlserver
-
-#### runpostgresqldb
-
-* create dockerfile that installs the DB on a docker
-* create docker-compose file to run the db
-* run docker compose file and wait until db up and running
-* assumptions: folder to init DB willbe copied to /docker-entrypoint-initdb.d so it will run when the container first starts.
-
-```bash
-runpostgresqldb 'project_name' 'folder to init database (bv ./test/sql)' <postgres version> <local_portnum>
-```
-
-#### executesqlonpostgresqldb
-```bash
-runpostgresqldb 'project_name' 'select * from mytable'
-```
-
-docker execute -it psql ... 'sql' => 
-runpostgresqldb && execute "copy postgres.backdb to postgres" && runtestsonpostgresdb && stopcontainer
-
-#### stoppostgresqldb
-```bash
-stoppostgresqldb 'project_name'
-```
-#### stoppostgresqldb
-```bash
-cleanuppostgresqldb 'project_name'
-```
+  * kov-docker-utils.mssql.sh
