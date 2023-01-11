@@ -255,7 +255,7 @@ function cleanup() {
   local DOCKER_FILENAME=$(generateDockerFileName "${UNIQUE_NAME}")
   local DOCKERCOMPOSE_FILENAME=$(generateDockerComposeFileName "${UNIQUE_NAME}")
 
-  DOCKER_BUILDKIT=1 docker compose -f "${DOCKERCOMPOSE_FILENAME}" down --rmi --remove-orphans
+  DOCKER_BUILDKIT=1 docker compose -f "${DOCKERCOMPOSE_FILENAME}" down --rmi=all --remove-orphans
   # DOCKER_BUILDKIT=1 docker compose -f "${DOCKERCOMPOSE_FILENAME}" rm;
   # docker images -a | grep "^${UNIQUE_NAME}\s" | awk '{print $3}' | xargs docker image rm -f
 
