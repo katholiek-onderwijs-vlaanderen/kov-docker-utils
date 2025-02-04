@@ -191,7 +191,7 @@ Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
 
   pwd
   cat > "${DOCKER_FILENAME}" << ENDOFFILE
-FROM postgres:11 as postgres_stage
+FROM postgres:15 as postgres_stage
 $(
   if [ "${CONTEXT}" == "" ]; then
     echo -n "";
