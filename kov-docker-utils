@@ -49,7 +49,7 @@ Usage: ./${SCRIPTNAME} <INSTANCE_TYPE> <COMMAND> <UNIQUE_NAME> ...
   Examples:
     * imagine you want to use this in a NodeJS test suite that needs a DB.
       add this to the 'test' script inside package.json:
-      \"test\": \"kov-docker-utils postgres start my_project 5432 ./docker/initdb && mocha; kov-docker-utils postgres stop my_project\"
+      \"test\": \"kov-docker-utils postgres start my_project 5432 ./docker/initdb 15 && mocha; kov-docker-utils postgres stop my_project\"
 "
   exit -1
 fi
