@@ -107,13 +107,11 @@ function waituntilupandrunning() {
 function start() {
   if [ $# -lt 2 ]; then
     echo "
-Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
+Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context> <OPTIONAL:mssql_version>
   * unique_name = the name to use as a base for the various docker related files,
     the docker container etc.
     WATCH OUT: must be LOWERCASE !!!
   * port = the port on localhost where the mssql server will be listening on (example: 1433).
-  * [FUTURE, to be implmented] version = a number indicating whether you need a
-    mssql 2017 (14.x), 2019 (15.x), 2022 (16.x) instance
   * context = folder where the files are located that are used to initialize the
     database on first start, defaults to '' ('' or empty string means that you only
     want an empty database, and nothing else)
@@ -124,6 +122,7 @@ Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
     * In order to allow you to reuse files inside the context that you also need in
       other places, all symbolic links will be replaced by the actual content before sending
       the build context to docker.
+  * mssql_version = optional mssql image tag, defaults to 2019-latest.
 
   This script will create the docker-files for a mssql database and start it.
   Some defaults are fixed: the default database is called 'db', and a user called
@@ -137,6 +136,14 @@ Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
   local UNIQUE_NAME="$1"
   local PORT="$2"
   local CONTEXT="$3"
+  local MSSQL_VERSION="${4:-2019-latest}"
+
+  if ! [[ "${MSSQL_VERSION}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+    echo "Invalid mssql_version '${MSSQL_VERSION}'. Allowed characters: letters, numbers, '.', '_' and '-'"
+    exit -1
+  fi
+
+  echo "Using mssql image version: ${MSSQL_VERSION}"
 
   local DOCKER_FILENAME=$(generateDockerFileName "${UNIQUE_NAME}")
   local DOCKERCOMPOSE_FILENAME=$(generateDockerComposeFileName "${UNIQUE_NAME}")
@@ -177,7 +184,7 @@ Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
 
   pwd
   cat > "${DOCKER_FILENAME}" << ENDOFFILE
-FROM mcr.microsoft.com/mssql/server:2019-latest as mssql_stage
+FROM mcr.microsoft.com/mssql/server:${MSSQL_VERSION} as mssql_stage
 $(
   if [ "${CONTEXT}" == "" ]; then
     echo -n ""
@@ -394,7 +401,7 @@ Usage: ./${SCRIPTNAME} <COMMAND> <unique_name> ...
   Examples:
     * imagine you want to use this in a NodeJS test suite that needs a DB.
       add this to the 'test' script inside package.json:
-      \"test\": \"${SCRIPTNAME} start my_project 1433 ./docker/initdb && mocha; ${SCRIPTNAME} stop my_project\"
+      \"test\": \"${SCRIPTNAME} start my_project 1433 ./docker/initdb 2019-latest && mocha; ${SCRIPTNAME} stop my_project\"
 "
   exit -1
 fi

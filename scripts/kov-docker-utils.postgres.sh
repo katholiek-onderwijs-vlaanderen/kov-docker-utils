@@ -122,12 +122,11 @@ function waituntilupandrunning() {
 function start() {
   if [ $# -lt 2 ]; then
     echo "
-Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
+Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context> <OPTIONAL:postgres_version>
   * unique_name = the name to use as a base for the various docker related files,
     the docker container etc.
     WATCH OUT: must be LOWERCASE !!!
   * port = the port on localhost where the postgresql server will be listening on.
-  * [FUTURE, to be implmented] version = a number indicating whether you need a postgres 11,12,13 instance
   * context = folder where the files are located that are used to initialize the
     database on first start, defaults to '' ('' or empty string means that you only
     want an empty database, and nothing else)
@@ -138,6 +137,7 @@ Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
     * In order to allow you to reuse files inside the context that you also need in
       other places, all symbolic links will be replacedby the actual content before sending
       the build context to docker.
+  * postgres_version = optional postgres image tag, defaults to 15.
 
   This script will create the docker-files for a postgres database and start it.
   Some defaults are fixed: the default database is called postgres, and a user called
@@ -151,6 +151,14 @@ Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
   local UNIQUE_NAME="$1"
   local PORT="$2"
   local CONTEXT="$3"
+  local POSTGRES_VERSION="${4:-15}"
+
+  if ! [[ "${POSTGRES_VERSION}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+    echo "Invalid postgres_version '${POSTGRES_VERSION}'. Allowed characters: letters, numbers, '.', '_' and '-'"
+    exit -1
+  fi
+
+  echo "Using postgres image version: ${POSTGRES_VERSION}"
 
   local DOCKER_FILENAME=$(generateDockerFileName "${UNIQUE_NAME}")
   local DOCKERCOMPOSE_FILENAME=$(generateDockerComposeFileName "${UNIQUE_NAME}")
@@ -191,7 +199,7 @@ Usage: ./${SCRIPTNAME} start <unique_name> <port> <OPTIONAL:context>
 
   pwd
   cat > "${DOCKER_FILENAME}" << ENDOFFILE
-FROM postgres:15 as postgres_stage
+FROM postgres:${POSTGRES_VERSION} as postgres_stage
 $(
   if [ "${CONTEXT}" == "" ]; then
     echo -n "";
@@ -369,7 +377,7 @@ Usage: ./${SCRIPTNAME} <COMMAND> <unique_name> ...
   Examples:
     * imagine you want to use this in a NodeJS test suite that needs a DB.
       add this to the 'test' script inside package.json:
-      \"test\": \"${SCRIPTNAME} start my_project 5432 ./docker/initdb && mocha; ${SCRIPTNAME} stop my_project\"
+      \"test\": \"${SCRIPTNAME} start my_project 5432 ./docker/initdb 15 && mocha; ${SCRIPTNAME} stop my_project\"
 "
   exit -1
 fi
